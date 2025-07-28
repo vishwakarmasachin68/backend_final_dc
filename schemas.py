@@ -45,8 +45,6 @@ class ProjectSchema(BaseModel):
         from_attributes = True
 
 class ChallanItemSchema(BaseModel):
-    id: Optional[int]
-    challan_id: Optional[int]
     sno: int
     asset_name: str
     description: Optional[str]
@@ -54,14 +52,10 @@ class ChallanItemSchema(BaseModel):
     serial_no: Optional[str]
     returnable: str
     expected_return_date: Optional[date]
-    returned_date: Optional[date]
-
-    class Config:
-        from_attributes = True
-        
+    returned_date: Optional[date] = None
 
 class ChallanSchema(BaseModel):
-    id: Optional[int]
+    id: Optional[int] = None  # ✅ Fix: Make truly optional
     dc_number: str
     dc_sequence: str
     date: date
@@ -71,7 +65,8 @@ class ChallanSchema(BaseModel):
     location: Optional[str]
     has_po: Optional[str]
     po_number: Optional[str]
-    items: Optional[List[ChallanItemSchema]] = []
+    items: Optional[List[ChallanItemSchema]] = []  # ✅ Ensure this is a list of objects
 
     class Config:
         from_attributes = True
+

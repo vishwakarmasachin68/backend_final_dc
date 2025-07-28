@@ -124,9 +124,11 @@ def get_challans(db: Session = Depends(get_db)):
 
 @app.post("/challans/", response_model=schemas.ChallanSchema)
 def add_challan(challan: schemas.ChallanSchema, db: Session = Depends(get_db)):
+    
     c = models.Challan(**{k: challan.dict()[k] for k in challan.dict() if k != "items"})
     db.add(c)
     db.flush()  # to get ID
+    print("Payload received at /challans/:", challan.dict())
 
     # Add items
     for item in challan.items:
