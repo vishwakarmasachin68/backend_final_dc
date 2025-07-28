@@ -10,6 +10,7 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+
 # Allow CORS for frontend (adjust as per your host/port)
 app.add_middleware(
     CORSMiddleware,
