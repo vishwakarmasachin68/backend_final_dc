@@ -39,6 +39,7 @@ def get_clients(db: Session = Depends(get_db)):
 #     db.commit()
 #     db.refresh(db_client)
 #     return db_client
+
 @app.post("/clients/", response_model=schemas.ClientSchema)
 def add_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
     db_client = models.Client(name=client.name)
@@ -81,6 +82,13 @@ def get_projects(db: Session = Depends(get_db)):
 #     db.refresh(db_project)
 #     return db_project
 
+@app.post("/projects/", response_model=schemas.ProjectSchema)
+def add_project(project: schemas.ProjectCreate, db: Session = Depends(get_db)):
+    db_project = models.Project(**{k: project.dict()[k] for k in project.dict() if k != "persons_involved"})
+    db.add(db_project)
+    db.commit()
+    db.refresh(db_project)
+    return db_project
 
 @app.put("/projects/{id}/", response_model=schemas.ProjectSchema)
 def update_project(id: int, project: schemas.ProjectSchema, db: Session = Depends(get_db)):
