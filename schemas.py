@@ -22,13 +22,14 @@ class ClientSchema(BaseModel):
     id: Optional[int]
     name: str
     class Config:
-        orm_mode = True
+        from_attributes = True
+
 
 class LocationSchema(BaseModel):
     id: Optional[int]
     name: str
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ProjectSchema(BaseModel):
     id: Optional[int]
@@ -41,7 +42,7 @@ class ProjectSchema(BaseModel):
     field_supervisor: Optional[str]
     persons_involved: Optional[str]        # as JSON string
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class ChallanItemSchema(BaseModel):
     id: Optional[int]
@@ -56,7 +57,7 @@ class ChallanItemSchema(BaseModel):
     returned_date: Optional[date]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
         
 
 class ChallanSchema(BaseModel):
@@ -73,4 +74,4 @@ class ChallanSchema(BaseModel):
     items: Optional[List[ChallanItemSchema]] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
