@@ -57,6 +57,7 @@ class ChallanItemSchema(BaseModel):
 
     class Config:
         orm_mode = True
+        
 
 class ChallanSchema(BaseModel):
     id: Optional[int]
