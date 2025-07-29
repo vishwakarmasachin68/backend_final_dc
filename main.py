@@ -2,19 +2,18 @@ from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from database import engine, SessionLocal, Base
 import models, schemas
-
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
+from datetime import date
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-
-# Allow CORS for frontend (adjust as per your host/port)
+# Allow CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For dev only; set to your frontend origin in prod!
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -32,14 +31,6 @@ def get_db():
 def get_clients(db: Session = Depends(get_db)):
     return db.query(models.Client).all()
 
-# @app.post("/clients/", response_model=schemas.ClientSchema)
-# def add_client(client: schemas.ClientSchema, db: Session = Depends(get_db)):
-#     db_client = models.Client(name=client.name)
-#     db.add(db_client)
-#     db.commit()
-#     db.refresh(db_client)
-#     return db_client
-
 @app.post("/clients/", response_model=schemas.ClientSchema)
 def add_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
     db_client = models.Client(name=client.name)
@@ -48,19 +39,11 @@ def add_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
     db.refresh(db_client)
     return db_client
 
-
 # Location endpoints
 @app.get("/locations/", response_model=List[schemas.LocationSchema])
 def get_locations(db: Session = Depends(get_db)):
     return db.query(models.Location).all()
 
-# @app.post("/locations/", response_model=schemas.LocationSchema)
-# def add_location(location: schemas.LocationSchema, db: Session = Depends(get_db)):
-#     db_location = models.Location(name=location.name)
-#     db.add(db_location)
-#     db.commit()
-#     db.refresh(db_location)
-#     return db_location
 @app.post("/locations/", response_model=schemas.LocationSchema)
 def add_location(location: schemas.LocationCreate, db: Session = Depends(get_db)):
     db_location = models.Location(name=location.name)
@@ -73,14 +56,6 @@ def add_location(location: schemas.LocationCreate, db: Session = Depends(get_db)
 @app.get("/projects/", response_model=List[schemas.ProjectSchema])
 def get_projects(db: Session = Depends(get_db)):
     return db.query(models.Project).all()
-
-# @app.post("/projects/", response_model=schemas.ProjectSchema)
-# def add_project(project: schemas.ProjectSchema, db: Session = Depends(get_db)):
-#     db_project = models.Project(**project.dict())
-#     db.add(db_project)
-#     db.commit()
-#     db.refresh(db_project)
-#     return db_project
 
 @app.post("/projects/", response_model=schemas.ProjectSchema)
 def add_project(project: schemas.ProjectCreate, db: Session = Depends(get_db)):
@@ -124,12 +99,10 @@ def get_challans(db: Session = Depends(get_db)):
 
 @app.post("/challans/", response_model=schemas.ChallanSchema)
 def add_challan(challan: schemas.ChallanSchema, db: Session = Depends(get_db)):
-    
     c = models.Challan(**{k: challan.dict()[k] for k in challan.dict() if k != "items"})
     db.add(c)
     db.flush()  # to get ID
-    # print("Payload received at /challans/:", challan.dict())
-
+    
     # Add items
     for item in challan.items:
         db_item = models.ChallanItem(**item.dict(), challan_id=c.id)
@@ -167,3 +140,19 @@ def delete_location(location_name: str, db: Session = Depends(get_db)):
     db.delete(db_location)
     db.commit()
     return {"message": "Location deleted successfully"}
+
+# New endpoint to update return status
+@app.put("/challan-items/{item_id}/return")
+def mark_item_as_returned(
+    item_id: int, 
+    returned_data: schemas.ItemReturnSchema, 
+    db: Session = Depends(get_db)
+):
+    db_item = db.query(models.ChallanItem).filter(models.ChallanItem.id == item_id).first()
+    if not db_item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    db_item.returned_date = returned_data.returned_date
+    db.commit()
+    db.refresh(db_item)
+    return db_item

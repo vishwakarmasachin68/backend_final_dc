@@ -24,7 +24,6 @@ class ClientSchema(BaseModel):
     class Config:
         from_attributes = True
 
-
 class LocationSchema(BaseModel):
     id: Optional[int]
     name: str
@@ -45,6 +44,7 @@ class ProjectSchema(BaseModel):
         from_attributes = True
 
 class ChallanItemSchema(BaseModel):
+    id: Optional[int] = None
     sno: int
     asset_name: str
     description: Optional[str]
@@ -55,7 +55,7 @@ class ChallanItemSchema(BaseModel):
     returned_date: Optional[date] = None
 
 class ChallanSchema(BaseModel):
-    id: Optional[int] = None  # ✅ Fix: Make truly optional
+    id: Optional[int] = None
     dc_number: str
     dc_sequence: str
     date: date
@@ -65,8 +65,11 @@ class ChallanSchema(BaseModel):
     location: Optional[str]
     has_po: Optional[str]
     po_number: Optional[str]
-    items: Optional[List[ChallanItemSchema]] = []  # ✅ Ensure this is a list of objects
+    items: Optional[List[ChallanItemSchema]] = []
 
     class Config:
         from_attributes = True
 
+# New schema for marking items as returned
+class ItemReturnSchema(BaseModel):
+    returned_date: date = date.today()
