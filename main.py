@@ -128,7 +128,7 @@ def add_challan(challan: schemas.ChallanSchema, db: Session = Depends(get_db)):
     c = models.Challan(**{k: challan.dict()[k] for k in challan.dict() if k != "items"})
     db.add(c)
     db.flush()  # to get ID
-    print("Payload received at /challans/:", challan.dict())
+    # print("Payload received at /challans/:", challan.dict())
 
     # Add items
     for item in challan.items:
@@ -149,3 +149,21 @@ def delete_challan(id: int, db: Session = Depends(get_db)):
         db.delete(c)
         db.commit()
     return {"ok": True}
+
+@app.delete("/clients/{client_name}")
+def delete_client(client_name: str, db: Session = Depends(get_db)):
+    db_client = db.query(models.Client).filter(models.Client.name == client_name).first()
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    db.delete(db_client)
+    db.commit()
+    return {"message": "Client deleted successfully"}
+
+@app.delete("/locations/{location_name}")
+def delete_location(location_name: str, db: Session = Depends(get_db)):
+    db_location = db.query(models.Location).filter(models.Location.name == location_name).first()
+    if not db_location:
+        raise HTTPException(status_code=404, detail="Location not found")
+    db.delete(db_location)
+    db.commit()
+    return {"message": "Location deleted successfully"}
