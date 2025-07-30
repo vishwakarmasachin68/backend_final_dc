@@ -33,12 +33,16 @@ def get_clients(db: Session = Depends(get_db)):
 
 @app.post("/clients/", response_model=schemas.ClientSchema)
 def add_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
+    existing_client = db.query(models.Client).filter(models.Client.name == client.name).first()
+    if existing_client:
+        raise HTTPException(status_code=400, detail="Client already exists")
+
     db_client = models.Client(name=client.name)
     db.add(db_client)
     db.commit()
     db.refresh(db_client)
     return db_client
-
+     
 # Location endpoints
 @app.get("/locations/", response_model=List[schemas.LocationSchema])
 def get_locations(db: Session = Depends(get_db)):
@@ -46,6 +50,9 @@ def get_locations(db: Session = Depends(get_db)):
 
 @app.post("/locations/", response_model=schemas.LocationSchema)
 def add_location(location: schemas.LocationCreate, db: Session = Depends(get_db)):
+    existing_location = db.query(models.Location).filter(models.Location.name == location.name).first()
+    if existing_location:
+        raise HTTPException(status_code=400, detail="Location already exists")
     db_location = models.Location(name=location.name)
     db.add(db_location)
     db.commit()
