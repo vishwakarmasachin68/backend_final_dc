@@ -10,14 +10,14 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# Allow CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],  # ✅ use actual origin
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 def get_db():
     db = SessionLocal()
@@ -42,7 +42,7 @@ def add_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_client)
     return db_client
-     
+        
 # Location endpoints
 @app.get("/locations/", response_model=List[schemas.LocationSchema])
 def get_locations(db: Session = Depends(get_db)):
@@ -120,6 +120,37 @@ def add_challan(challan: schemas.ChallanSchema, db: Session = Depends(get_db)):
     res = schemas.ChallanSchema.from_orm(c)
     res.items = items
     return res
+
+@app.put("/challans/{id}/", response_model=schemas.ChallanSchema)
+def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depends(get_db)):
+    # First get the existing challan
+    db_challan = db.query(models.Challan).filter(models.Challan.id == id).first()
+    if not db_challan:
+        raise HTTPException(status_code=404, detail="Challan not found")
+    
+    # Update the main challan fields
+    # challan_data = challan.dict(exclude={"items"})
+    challan_data = challan.dict(exclude={"items", "id"})  # ✅ prevent id overwrite
+
+    for key, value in challan_data.items():
+        setattr(db_challan, key, value)
+    
+    # Delete existing items and add new ones
+    db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
+    
+    # Add new items
+    for item in challan.items:
+        db_item = models.ChallanItem(**item.dict(), challan_id=id)
+        db.add(db_item)
+    
+    db.commit()
+    db.refresh(db_challan)
+    
+    # Get the updated items to return
+    items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).all()
+    res = schemas.ChallanSchema.from_orm(db_challan)
+    res.items = items
+    return res  
 
 @app.delete("/challans/{id}/")
 def delete_challan(id: int, db: Session = Depends(get_db)):
