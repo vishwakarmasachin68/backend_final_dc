@@ -16,7 +16,7 @@ class ProjectCreate(BaseModel):
     project_name: str
     project_details: Optional[str] = None
     field_supervisor: Optional[str] = None
-    persons_involved: Optional[str] = None  # as JSON string
+    persons_involved: Optional[str] = None  
     
 class ClientSchema(BaseModel):
     id: Optional[int]
@@ -39,7 +39,7 @@ class ProjectSchema(BaseModel):
     project_name: str
     project_details: Optional[str]
     field_supervisor: Optional[str]
-    persons_involved: Optional[str]        # as JSON string
+    persons_involved: Optional[str]       
     class Config:
         from_attributes = True
 
@@ -70,6 +70,6 @@ class ChallanSchema(BaseModel):
     class Config:
         from_attributes = True
 
-# New schema for marking items as returned
+
 class ItemReturnSchema(BaseModel):
     returned_date: date = date.today()

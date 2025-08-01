@@ -128,17 +128,16 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
     if not db_challan:
         raise HTTPException(status_code=404, detail="Challan not found")
     
-    # Update the main challan fields
-    # challan_data = challan.dict(exclude={"items"})
-    challan_data = challan.dict(exclude={"items", "id"})  # ✅ prevent id overwrite
+  
+    challan_data = challan.dict(exclude={"items", "id"})
 
     for key, value in challan_data.items():
         setattr(db_challan, key, value)
     
-    # Delete existing items and add new ones
+
     db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
     
-    # Add new items
+    
     for item in challan.items:
         db_item = models.ChallanItem(**item.dict(), challan_id=id)
         db.add(db_item)
@@ -146,7 +145,7 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
     db.commit()
     db.refresh(db_challan)
     
-    # Get the updated items to return
+   
     items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).all()
     res = schemas.ChallanSchema.from_orm(db_challan)
     res.items = items
@@ -179,7 +178,7 @@ def delete_location(location_name: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "Location deleted successfully"}
 
-# New endpoint to update return status
+
 @app.put("/challan-items/{item_id}/return")
 def mark_item_as_returned(
     item_id: int, 

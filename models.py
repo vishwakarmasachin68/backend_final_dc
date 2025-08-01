@@ -22,7 +22,7 @@ class Project(Base):
     project_name = Column(String, nullable=False)
     project_details = Column(Text)
     field_supervisor = Column(String)
-    persons_involved = Column(Text)  # store as JSON string
+    persons_involved = Column(Text)  
 
 class Challan(Base):
     __tablename__ = "challans"
