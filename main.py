@@ -12,7 +12,8 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://dc-generator.onrender.com"], 
+    allow_origins=["https://dc-generator.onrender.com"],
+    # allow_origins = ["*"],  # Allows all origins, adjust as needed 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -193,3 +194,38 @@ def mark_item_as_returned(
     db.commit()
     db.refresh(db_item)
     return db_item
+
+@app.get("/assets/", response_model=List[schemas.AssetSchema])
+def get_assets(db: Session = Depends(get_db)):
+    return db.query(models.Asset).all()
+
+@app.post("/assets/", response_model=schemas.AssetSchema)
+def add_asset(asset: schemas.AssetCreate, db: Session = Depends(get_db)):
+    existing_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset.asset_id).first()
+    if existing_asset:
+        raise HTTPException(status_code=400, detail="Asset ID already exists")
+    db_asset = models.Asset(**asset.dict())
+    db.add(db_asset)
+    db.commit()
+    db.refresh(db_asset)
+    return db_asset
+
+@app.put("/assets/{asset_id}", response_model=schemas.AssetSchema)
+def update_asset(asset_id: str, asset: schemas.AssetCreate, db: Session = Depends(get_db)):
+    db_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
+    if not db_asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    for key, value in asset.dict().items():
+        setattr(db_asset, key, value)
+    db.commit()
+    db.refresh(db_asset)
+    return db_asset
+
+@app.delete("/assets/{asset_id}")
+def delete_asset(asset_id: str, db: Session = Depends(get_db)):
+    db_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
+    if not db_asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    db.delete(db_asset)
+    db.commit()
+    return {"ok": True}

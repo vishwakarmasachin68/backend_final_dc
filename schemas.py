@@ -73,3 +73,46 @@ class ChallanSchema(BaseModel):
 
 class ItemReturnSchema(BaseModel):
     returned_date: date = date.today()
+
+class AssetBase(BaseModel):
+    asset_id: str
+    asset_name: str
+    category: Optional[str] = None
+    make_model: Optional[str] = None
+    serial_number: str
+    supplier_details: Optional[str] = None
+    date_of_purchase: Optional[date] = None
+    warranty_details: Optional[str] = None
+    last_service_date: Optional[date] = None
+    covered_under_amc: Optional[bool] = False
+    amc_vendor_details: Optional[str] = None
+    condition: Optional[str] = None
+    status: Optional[str] = "active"
+    
+    # Transaction fields
+    transaction_date: Optional[date] = None
+    transaction_type: Optional[str] = None  # inward/outward
+    received_from: Optional[str] = None
+    purpose: Optional[str] = None
+    issued_by: Optional[str] = None
+    received_by: Optional[str] = None
+    expected_return_date: Optional[date] = None
+    returned_date: Optional[date] = None
+    is_received: Optional[bool] = False
+    
+    # Disposal fields
+    disposal_approvals_obtained: Optional[bool] = False
+    date_of_approval: Optional[date] = None
+    approved_by: Optional[str] = None
+    media_sanitised: Optional[bool] = False
+    media_sanitised_by: Optional[str] = None
+    date_of_media_sanitisation: Optional[date] = None
+
+class AssetCreate(AssetBase):
+    pass
+
+class AssetSchema(AssetBase):
+    id: Optional[int] = None
+    
+    class Config:
+        from_attributes = True

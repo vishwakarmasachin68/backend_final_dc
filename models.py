@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Date, Text
+from sqlalchemy import Column, Integer, String, Date, Text, Boolean
 from database import Base
+
 
 class Client(Base):
     __tablename__ = "clients"
@@ -49,3 +50,43 @@ class ChallanItem(Base):
     returnable = Column(String)
     expected_return_date = Column(Date)
     returned_date = Column(Date)
+
+from sqlalchemy import Column, Integer, String, Date, Text, Boolean, ForeignKey
+from database import Base
+
+class Asset(Base):
+    __tablename__ = "assets"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    asset_id = Column(String, unique=True, nullable=False)
+    asset_name = Column(String, nullable=False)
+    category = Column(String)
+    make_model = Column(String)
+    serial_number = Column(String, unique=True)
+    supplier_details = Column(Text)
+    date_of_purchase = Column(Date)
+    warranty_details = Column(Text)
+    last_service_date = Column(Date)
+    covered_under_amc = Column(Boolean, default=False)
+    amc_vendor_details = Column(Text)
+    condition = Column(String)
+    status = Column(String, default="active")
+    
+    # Transaction details
+    transaction_date = Column(Date)
+    transaction_type = Column(String)  # inward/outward
+    received_from = Column(String)
+    purpose = Column(String)
+    issued_by = Column(String)
+    received_by = Column(String)
+    expected_return_date = Column(Date)
+    returned_date = Column(Date)
+    is_received = Column(Boolean, default=False)
+    
+    # Disposal details
+    disposal_approvals_obtained = Column(Boolean, default=False)
+    date_of_approval = Column(Date)
+    approved_by = Column(String)
+    media_sanitised = Column(Boolean, default=False)
+    media_sanitised_by = Column(String)
+    date_of_media_sanitisation = Column(Date)
