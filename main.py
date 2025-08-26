@@ -5,19 +5,26 @@ import models, schemas
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import date
+import json
 
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# CORS middleware configuration
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://dc-generator.onrender.com"],
-    # allow_origins = ["*"],  # Allows all origins, adjust as needed 
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 def get_db():
@@ -43,7 +50,16 @@ def add_client(client: schemas.ClientCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_client)
     return db_client
-        
+
+@app.delete("/clients/{client_name}")
+def delete_client(client_name: str, db: Session = Depends(get_db)):
+    db_client = db.query(models.Client).filter(models.Client.name == client_name).first()
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    db.delete(db_client)
+    db.commit()
+    return {"message": "Client deleted successfully"}
+
 # Location endpoints
 @app.get("/locations/", response_model=List[schemas.LocationSchema])
 def get_locations(db: Session = Depends(get_db)):
@@ -60,6 +76,15 @@ def add_location(location: schemas.LocationCreate, db: Session = Depends(get_db)
     db.refresh(db_location)
     return db_location
 
+@app.delete("/locations/{location_name}")
+def delete_location(location_name: str, db: Session = Depends(get_db)):
+    db_location = db.query(models.Location).filter(models.Location.name == location_name).first()
+    if not db_location:
+        raise HTTPException(status_code=404, detail="Location not found")
+    db.delete(db_location)
+    db.commit()
+    return {"message": "Location deleted successfully"}
+
 # Project endpoints
 @app.get("/projects/", response_model=List[schemas.ProjectSchema])
 def get_projects(db: Session = Depends(get_db)):
@@ -67,7 +92,7 @@ def get_projects(db: Session = Depends(get_db)):
 
 @app.post("/projects/", response_model=schemas.ProjectSchema)
 def add_project(project: schemas.ProjectCreate, db: Session = Depends(get_db)):
-    db_project = models.Project(**{k: project.dict()[k] for k in project.dict() if k != "persons_involved"})
+    db_project = models.Project(**project.dict())
     db.add(db_project)
     db.commit()
     db.refresh(db_project)
@@ -93,6 +118,84 @@ def delete_project(id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"ok": True}
 
+# Asset endpoints
+@app.get("/assets/", response_model=List[schemas.AssetSchema])
+def get_assets(db: Session = Depends(get_db)):
+    return db.query(models.Asset).all()
+
+@app.get("/assets/available/", response_model=List[schemas.AssetSchema])
+def get_available_assets(db: Session = Depends(get_db)):
+    return db.query(models.Asset).filter(models.Asset.status == "available").all()
+
+@app.post("/assets/", response_model=schemas.AssetSchema)
+def add_asset(asset: schemas.AssetCreate, db: Session = Depends(get_db)):
+    existing_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset.asset_id).first()
+    if existing_asset:
+        raise HTTPException(status_code=400, detail="Asset ID already exists")
+    
+    db_asset = models.Asset(**asset.dict())
+    db.add(db_asset)
+    db.commit()
+    db.refresh(db_asset)
+    return db_asset
+
+@app.put("/assets/{asset_id}/", response_model=schemas.AssetSchema)
+def update_asset(asset_id: str, asset: schemas.AssetCreate, db: Session = Depends(get_db)):
+    db_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
+    if not db_asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    
+    for key, value in asset.dict().items():
+        setattr(db_asset, key, value)
+    
+    db.commit()
+    db.refresh(db_asset)
+    return db_asset
+
+@app.delete("/assets/{asset_id}")
+def delete_asset(asset_id: str, db: Session = Depends(get_db)):
+    db_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
+    if not db_asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    db.delete(db_asset)
+    db.commit()
+    return {"ok": True}
+
+# Asset Tracking endpoints
+@app.get("/asset-tracking/", response_model=List[schemas.AssetTrackingSchema])
+def get_asset_tracking(db: Session = Depends(get_db)):
+    return db.query(models.AssetTracking).all()
+
+@app.post("/asset-tracking/", response_model=schemas.AssetTrackingSchema)
+def add_asset_tracking(tracking: schemas.AssetTrackingCreate, db: Session = Depends(get_db)):
+    db_tracking = models.AssetTracking(**tracking.dict())
+    db.add(db_tracking)
+    db.commit()
+    db.refresh(db_tracking)
+    return db_tracking
+
+@app.put("/asset-tracking/{id}", response_model=schemas.AssetTrackingSchema)
+def update_asset_tracking(id: int, tracking: schemas.AssetTrackingCreate, db: Session = Depends(get_db)):
+    db_tracking = db.query(models.AssetTracking).filter(models.AssetTracking.id == id).first()
+    if not db_tracking:
+        raise HTTPException(status_code=404, detail="Tracking record not found")
+    
+    for key, value in tracking.dict().items():
+        setattr(db_tracking, key, value)
+    
+    db.commit()
+    db.refresh(db_tracking)
+    return db_tracking
+
+@app.delete("/asset-tracking/{id}")
+def delete_asset_tracking(id: int, db: Session = Depends(get_db)):
+    db_tracking = db.query(models.AssetTracking).filter(models.AssetTracking.id == id).first()
+    if not db_tracking:
+        raise HTTPException(status_code=404, detail="Tracking record not found")
+    db.delete(db_tracking)
+    db.commit()
+    return {"ok": True}
+
 # Challan endpoints
 @app.get("/challans/", response_model=List[schemas.ChallanSchema])
 def get_challans(db: Session = Depends(get_db)):
@@ -106,8 +209,16 @@ def get_challans(db: Session = Depends(get_db)):
     return result
 
 @app.post("/challans/", response_model=schemas.ChallanSchema)
-def add_challan(challan: schemas.ChallanSchema, db: Session = Depends(get_db)):
-    c = models.Challan(**{k: challan.dict()[k] for k in challan.dict() if k != "items"})
+def add_challan(challan: schemas.ChallanCreate, db: Session = Depends(get_db)):
+    # Generate DC number
+    prefix = "DSI/"
+    middle = challan.has_po == "yes" and challan.po_number or challan.date.strftime("%d%m%Y")
+    dc_number = f"{prefix}{middle}/{challan.dc_sequence}"
+    
+    # Create challan
+    c_data = challan.dict(exclude={"items"})
+    c_data["dc_number"] = dc_number
+    c = models.Challan(**c_data)
     db.add(c)
     db.flush()  # to get ID
     
@@ -115,8 +226,11 @@ def add_challan(challan: schemas.ChallanSchema, db: Session = Depends(get_db)):
     for item in challan.items:
         db_item = models.ChallanItem(**item.dict(), challan_id=c.id)
         db.add(db_item)
+    
     db.commit()
     db.refresh(c)
+    
+    # Get items for response
     items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == c.id).all()
     res = schemas.ChallanSchema.from_orm(c)
     res.items = items
@@ -129,16 +243,15 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
     if not db_challan:
         raise HTTPException(status_code=404, detail="Challan not found")
     
-  
+    # Update challan data
     challan_data = challan.dict(exclude={"items", "id"})
-
     for key, value in challan_data.items():
         setattr(db_challan, key, value)
     
-
+    # Delete existing items
     db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
     
-    
+    # Add new items
     for item in challan.items:
         db_item = models.ChallanItem(**item.dict(), challan_id=id)
         db.add(db_item)
@@ -146,39 +259,20 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
     db.commit()
     db.refresh(db_challan)
     
-   
+    # Get items for response
     items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).all()
     res = schemas.ChallanSchema.from_orm(db_challan)
     res.items = items
-    return res  
+    return res
 
 @app.delete("/challans/{id}/")
 def delete_challan(id: int, db: Session = Depends(get_db)):
     c = db.query(models.Challan).filter(models.Challan.id == id).first()
-    db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
     if c:
+        db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
         db.delete(c)
         db.commit()
     return {"ok": True}
-
-@app.delete("/clients/{client_name}")
-def delete_client(client_name: str, db: Session = Depends(get_db)):
-    db_client = db.query(models.Client).filter(models.Client.name == client_name).first()
-    if not db_client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    db.delete(db_client)
-    db.commit()
-    return {"message": "Client deleted successfully"}
-
-@app.delete("/locations/{location_name}")
-def delete_location(location_name: str, db: Session = Depends(get_db)):
-    db_location = db.query(models.Location).filter(models.Location.name == location_name).first()
-    if not db_location:
-        raise HTTPException(status_code=404, detail="Location not found")
-    db.delete(db_location)
-    db.commit()
-    return {"message": "Location deleted successfully"}
-
 
 @app.put("/challan-items/{item_id}/return")
 def mark_item_as_returned(
@@ -195,37 +289,34 @@ def mark_item_as_returned(
     db.refresh(db_item)
     return db_item
 
-@app.get("/assets/", response_model=List[schemas.AssetSchema])
-def get_assets(db: Session = Depends(get_db)):
-    return db.query(models.Asset).all()
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 
-@app.post("/assets/", response_model=schemas.AssetSchema)
-def add_asset(asset: schemas.AssetCreate, db: Session = Depends(get_db)):
-    existing_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset.asset_id).first()
-    if existing_asset:
-        raise HTTPException(status_code=400, detail="Asset ID already exists")
-    db_asset = models.Asset(**asset.dict())
-    db.add(db_asset)
+# main.py - in add_challan function
+def add_challan(challan: schemas.ChallanCreate, db: Session = Depends(get_db)):
+    # Generate DC number
+    prefix = "DSI/"
+    middle = challan.has_po == "yes" and challan.po_number or challan.date.strftime("%d%m%Y")
+    dc_number = f"{prefix}{middle}/{challan.dc_sequence}"
+    
+    # Create challan - remove project_id
+    c_data = challan.dict(exclude={"items"})
+    c_data["dc_number"] = dc_number
+    c = models.Challan(**c_data)
+    db.add(c)
+    db.flush()  # to get ID
+    
+    # Add items
+    for item in challan.items:
+        db_item = models.ChallanItem(**item.dict(), challan_id=c.id)
+        db.add(db_item)
+    
     db.commit()
-    db.refresh(db_asset)
-    return db_asset
-
-@app.put("/assets/{asset_id}", response_model=schemas.AssetSchema)
-def update_asset(asset_id: str, asset: schemas.AssetCreate, db: Session = Depends(get_db)):
-    db_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
-    if not db_asset:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    for key, value in asset.dict().items():
-        setattr(db_asset, key, value)
-    db.commit()
-    db.refresh(db_asset)
-    return db_asset
-
-@app.delete("/assets/{asset_id}")
-def delete_asset(asset_id: str, db: Session = Depends(get_db)):
-    db_asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
-    if not db_asset:
-        raise HTTPException(status_code=404, detail="Asset not found")
-    db.delete(db_asset)
-    db.commit()
-    return {"ok": True}
+    db.refresh(c)
+    
+    # Get items for response
+    items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == c.id).all()
+    res = schemas.ChallanSchema.from_orm(c)
+    res.items = items
+    return res    
