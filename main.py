@@ -12,8 +12,6 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI()
 
 # CORS middleware configuration
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -24,8 +22,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 
 def get_db():
     db = SessionLocal()
@@ -164,16 +160,27 @@ def delete_asset(asset_id: str, db: Session = Depends(get_db)):
 # Asset Tracking endpoints
 @app.get("/asset-tracking/", response_model=List[schemas.AssetTrackingSchema])
 def get_asset_tracking(db: Session = Depends(get_db)):
-    return db.query(models.AssetTracking).all()
+    try:
+        records = db.query(models.AssetTracking).all()
+        return records
+    except Exception as e:
+        print(f"Error fetching asset tracking: {e}")
+        db.rollback()  # Add rollback in case of error
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/asset-tracking/", response_model=schemas.AssetTrackingSchema)
 def add_asset_tracking(tracking: schemas.AssetTrackingCreate, db: Session = Depends(get_db)):
-    db_tracking = models.AssetTracking(**tracking.dict())
-    db.add(db_tracking)
-    db.commit()
-    db.refresh(db_tracking)
-    return db_tracking
-
+    try:
+        db_tracking = models.AssetTracking(**tracking.dict())
+        db.add(db_tracking)
+        db.commit()
+        db.refresh(db_tracking)
+        return db_tracking
+    except Exception as e:
+        db.rollback()
+        print(f"Error adding asset tracking: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+    
 @app.put("/asset-tracking/{id}", response_model=schemas.AssetTrackingSchema)
 def update_asset_tracking(id: int, tracking: schemas.AssetTrackingCreate, db: Session = Depends(get_db)):
     db_tracking = db.query(models.AssetTracking).filter(models.AssetTracking.id == id).first()
@@ -289,34 +296,15 @@ def mark_item_as_returned(
     db.refresh(db_item)
     return db_item
 
+@app.get("/health")
+def health_check(db: Session = Depends(get_db)):
+    try:
+        # Test database connection
+        db.execute("SELECT 1")
+        return {"status": "healthy", "database": "connected"}
+    except Exception as e:
+        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-# main.py - in add_challan function
-def add_challan(challan: schemas.ChallanCreate, db: Session = Depends(get_db)):
-    # Generate DC number
-    prefix = "DSI/"
-    middle = challan.has_po == "yes" and challan.po_number or challan.date.strftime("%d%m%Y")
-    dc_number = f"{prefix}{middle}/{challan.dc_sequence}"
-    
-    # Create challan - remove project_id
-    c_data = challan.dict(exclude={"items"})
-    c_data["dc_number"] = dc_number
-    c = models.Challan(**c_data)
-    db.add(c)
-    db.flush()  # to get ID
-    
-    # Add items
-    for item in challan.items:
-        db_item = models.ChallanItem(**item.dict(), challan_id=c.id)
-        db.add(db_item)
-    
-    db.commit()
-    db.refresh(c)
-    
-    # Get items for response
-    items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == c.id).all()
-    res = schemas.ChallanSchema.from_orm(c)
-    res.items = items
-    return res    

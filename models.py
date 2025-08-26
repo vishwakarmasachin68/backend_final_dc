@@ -70,7 +70,7 @@ class AssetTracking(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     asset_id = Column(String, nullable=False)
-    asset_name = Column(String, nullable=True)
+    asset_name = Column(String, nullable=False)
     serial_number = Column(String, nullable=True)
     date = Column(Date, nullable=False)
     transaction_type = Column(String, nullable=False)
@@ -99,7 +99,7 @@ class Challan(Base):
 class ChallanItem(Base):
     __tablename__ = "challan_items"
     id = Column(Integer, primary_key=True, index=True)
-    challan_id = Column(Integer, nullable=False)
+    challan_id = Column(Integer, ForeignKey("challans.id"), nullable=False)
     sno = Column(Integer, nullable=False)
     asset_id = Column(String, nullable=True)
     asset_name = Column(String, nullable=False)
@@ -109,3 +109,6 @@ class ChallanItem(Base):
     returnable = Column(String, default="no")
     expected_return_date = Column(Date, nullable=True)
     returned_date = Column(Date, nullable=True)
+    
+    # Relationship
+    challan = relationship("Challan", backref="items")

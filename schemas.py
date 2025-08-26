@@ -92,7 +92,7 @@ class AssetSchema(AssetBase):
 
 class AssetTrackingBase(BaseModel):
     asset_id: str
-    asset_name: Optional[str] = None
+    asset_name: str
     serial_number: Optional[str] = None
     date: date
     transaction_type: str
@@ -133,7 +133,6 @@ class ChallanBase(BaseModel):
     dc_sequence: str
     date: date
     name: Optional[str] = None
-    project_id: Optional[int] = None
     project_name: Optional[str] = None
     client: Optional[str] = None
     location: Optional[str] = None
@@ -153,23 +152,3 @@ class ChallanSchema(ChallanBase):
 
 class ItemReturnSchema(BaseModel):
     returned_date: date
-# schemas.py - update ChallanBase and ChallanSchema
-class ChallanBase(BaseModel):
-    dc_sequence: str
-    date: date
-    name: Optional[str] = None
-    # Remove project_id
-    # project_id: Optional[int] = None
-    project_name: Optional[str] = None
-    client: Optional[str] = None
-    location: Optional[str] = None
-    has_po: Optional[str] = "no"
-    po_number: Optional[str] = None
-    items: List[ChallanItemSchema] = []
-
-class ChallanSchema(ChallanBase):
-    id: Optional[int] = None
-    dc_number: Optional[str] = None
-    
-    class Config:
-        from_attributes = True
