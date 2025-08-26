@@ -1,84 +1,57 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from datetime import date
+from datetime import date, datetime
 
 class ClientCreate(BaseModel):
     name: str
 
+class ClientSchema(BaseModel):
+    id: Optional[int] = None
+    name: str
+    
+    class Config:
+        from_attributes = True
+
 class LocationCreate(BaseModel):
     name: str
 
+class LocationSchema(BaseModel):
+    id: Optional[int] = None
+    name: str
+    
+    class Config:
+        from_attributes = True
+
 class ProjectCreate(BaseModel):
-    client: str
-    location: str
-    has_po: str
+    client: Optional[str] = None
+    location: Optional[str] = None
+    has_po: Optional[str] = "no"
     po_number: Optional[str] = None
     project_name: str
     project_details: Optional[str] = None
     field_supervisor: Optional[str] = None
-    persons_involved: Optional[str] = None  
-    
-class ClientSchema(BaseModel):
-    id: Optional[int]
-    name: str
-    class Config:
-        from_attributes = True
-
-class LocationSchema(BaseModel):
-    id: Optional[int]
-    name: str
-    class Config:
-        from_attributes = True
+    persons_involved: Optional[str] = None
 
 class ProjectSchema(BaseModel):
-    id: Optional[int]
-    client: str
-    location: str
-    has_po: str
-    po_number: Optional[str]
+    id: Optional[int] = None
+    client: Optional[str] = None
+    location: Optional[str] = None
+    has_po: Optional[str] = "no"
+    po_number: Optional[str] = None
     project_name: str
-    project_details: Optional[str]
-    field_supervisor: Optional[str]
-    persons_involved: Optional[str]       
+    project_details: Optional[str] = None
+    field_supervisor: Optional[str] = None
+    persons_involved: Optional[str] = None
+    
     class Config:
         from_attributes = True
-
-class ChallanItemSchema(BaseModel):
-    id: Optional[int] = None
-    sno: int
-    asset_name: str
-    description: Optional[str]
-    quantity: int
-    serial_no: Optional[str]
-    returnable: str
-    expected_return_date: Optional[date]
-    returned_date: Optional[date] = None
-
-class ChallanSchema(BaseModel):
-    id: Optional[int] = None
-    dc_number: str
-    dc_sequence: str
-    date: date
-    name: Optional[str]
-    project_name: Optional[str]
-    client: Optional[str]
-    location: Optional[str]
-    has_po: Optional[str]
-    po_number: Optional[str]
-    items: Optional[List[ChallanItemSchema]] = []
-
-    class Config:
-        from_attributes = True
-
-
-class ItemReturnSchema(BaseModel):
-    returned_date: date = date.today()
 
 class AssetBase(BaseModel):
     asset_id: str
     asset_name: str
     category: Optional[str] = None
-    make_model: Optional[str] = None
+    make: Optional[str] = None
+    model: Optional[str] = None
     serial_number: str
     supplier_details: Optional[str] = None
     date_of_purchase: Optional[date] = None
@@ -86,21 +59,21 @@ class AssetBase(BaseModel):
     last_service_date: Optional[date] = None
     covered_under_amc: Optional[bool] = False
     amc_vendor_details: Optional[str] = None
-    condition: Optional[str] = None
-    status: Optional[str] = "active"
-    
-    # Transaction fields
+    transaction_type: Optional[str] = None
     transaction_date: Optional[date] = None
-    transaction_type: Optional[str] = None  # inward/outward
+    vendor_sent_to: Optional[str] = None
     received_from: Optional[str] = None
     purpose: Optional[str] = None
     issued_by: Optional[str] = None
     received_by: Optional[str] = None
+    asset_issued_to: Optional[str] = None
+    employee_number: Optional[str] = None
+    date_of_issue: Optional[date] = None
     expected_return_date: Optional[date] = None
     returned_date: Optional[date] = None
-    is_received: Optional[bool] = False
-    
-    # Disposal fields
+    current_location: Optional[str] = None
+    condition: Optional[str] = None
+    status: Optional[str] = "available"
     disposal_approvals_obtained: Optional[bool] = False
     date_of_approval: Optional[date] = None
     approved_by: Optional[str] = None
@@ -113,6 +86,90 @@ class AssetCreate(AssetBase):
 
 class AssetSchema(AssetBase):
     id: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+class AssetTrackingBase(BaseModel):
+    asset_id: str
+    asset_name: Optional[str] = None
+    serial_number: Optional[str] = None
+    date: date
+    transaction_type: str
+    vendor_sent_to: Optional[str] = None
+    received_from: Optional[str] = None
+    purpose: Optional[str] = None
+    issued_by: Optional[str] = None
+    received_by: Optional[str] = None
+    return_date: Optional[date] = None
+    notes: Optional[str] = None
+
+class AssetTrackingCreate(AssetTrackingBase):
+    pass
+
+class AssetTrackingSchema(AssetTrackingBase):
+    id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+class ChallanItemSchema(BaseModel):
+    id: Optional[int] = None
+    sno: int
+    asset_id: Optional[str] = None
+    asset_name: str
+    description: Optional[str] = None
+    quantity: int
+    serial_no: Optional[str] = None
+    returnable: str
+    expected_return_date: Optional[date] = None
+    returned_date: Optional[date] = None
+    
+    class Config:
+        from_attributes = True
+
+class ChallanBase(BaseModel):
+    dc_sequence: str
+    date: date
+    name: Optional[str] = None
+    project_id: Optional[int] = None
+    project_name: Optional[str] = None
+    client: Optional[str] = None
+    location: Optional[str] = None
+    has_po: Optional[str] = "no"
+    po_number: Optional[str] = None
+    items: List[ChallanItemSchema] = []
+
+class ChallanCreate(ChallanBase):
+    pass
+
+class ChallanSchema(ChallanBase):
+    id: Optional[int] = None
+    dc_number: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class ItemReturnSchema(BaseModel):
+    returned_date: date
+# schemas.py - update ChallanBase and ChallanSchema
+class ChallanBase(BaseModel):
+    dc_sequence: str
+    date: date
+    name: Optional[str] = None
+    # Remove project_id
+    # project_id: Optional[int] = None
+    project_name: Optional[str] = None
+    client: Optional[str] = None
+    location: Optional[str] = None
+    has_po: Optional[str] = "no"
+    po_number: Optional[str] = None
+    items: List[ChallanItemSchema] = []
+
+class ChallanSchema(ChallanBase):
+    id: Optional[int] = None
+    dc_number: Optional[str] = None
     
     class Config:
         from_attributes = True

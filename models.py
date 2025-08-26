@@ -96,7 +96,6 @@ class Challan(Base):
     has_po = Column(String, default="no")
     po_number = Column(String, nullable=True)
 
-
 class ChallanItem(Base):
     __tablename__ = "challan_items"
     id = Column(Integer, primary_key=True, index=True)
