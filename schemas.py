@@ -53,6 +53,7 @@ class AssetBase(BaseModel):
     make: Optional[str] = None
     model: Optional[str] = None
     serial_number: str
+    description: Optional[str] = None  # Added description field
     supplier_details: Optional[str] = None
     date_of_purchase: Optional[date] = None
     warranty_details: Optional[str] = None

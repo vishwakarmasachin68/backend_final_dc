@@ -37,6 +37,7 @@ class Asset(Base):
     make = Column(String, nullable=True)
     model = Column(String, nullable=True)
     serial_number = Column(String, unique=True, nullable=False)
+    description = Column(Text, nullable=True)  # Added description field
     supplier_details = Column(Text, nullable=True)
     date_of_purchase = Column(Date, nullable=True)
     warranty_details = Column(Text, nullable=True)
