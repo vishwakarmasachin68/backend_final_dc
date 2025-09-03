@@ -168,6 +168,13 @@ def get_asset_tracking(db: Session = Depends(get_db)):
 @app.post("/asset-tracking/", response_model=schemas.AssetTrackingSchema)
 def add_asset_tracking(tracking: schemas.AssetTrackingCreate, db: Session = Depends(get_db)):
     try:
+        # Update asset status to "in-use" when tracking outward movement
+        if tracking.transaction_type == "outward":
+            asset = db.query(models.Asset).filter(models.Asset.asset_id == tracking.asset_id).first()
+            if asset:
+                asset.status = "in-use"
+                db.add(asset)
+        
         db_tracking = models.AssetTracking(**tracking.dict())
         db.add(db_tracking)
         db.commit()
@@ -184,6 +191,16 @@ def update_asset_tracking(id: int, tracking: schemas.AssetTrackingCreate, db: Se
     if not db_tracking:
         raise HTTPException(status_code=404, detail="Tracking record not found")
     
+    # Update asset status if transaction type changes
+    if tracking.transaction_type != db_tracking.transaction_type:
+        asset = db.query(models.Asset).filter(models.Asset.asset_id == tracking.asset_id).first()
+        if asset:
+            if tracking.transaction_type == "outward":
+                asset.status = "in-use"
+            elif tracking.transaction_type == "inward":
+                asset.status = "available"
+            db.add(asset)
+    
     for key, value in tracking.dict().items():
         setattr(db_tracking, key, value)
     
@@ -196,6 +213,14 @@ def delete_asset_tracking(id: int, db: Session = Depends(get_db)):
     db_tracking = db.query(models.AssetTracking).filter(models.AssetTracking.id == id).first()
     if not db_tracking:
         raise HTTPException(status_code=404, detail="Tracking record not found")
+    
+    # If deleting an outward transaction, set asset status back to available
+    if db_tracking.transaction_type == "outward":
+        asset = db.query(models.Asset).filter(models.Asset.asset_id == db_tracking.asset_id).first()
+        if asset:
+            asset.status = "available"
+            db.add(asset)
+    
     db.delete(db_tracking)
     db.commit()
     return {"ok": True}
@@ -226,10 +251,17 @@ def add_challan(challan: schemas.ChallanCreate, db: Session = Depends(get_db)):
     db.add(c)
     db.flush()  # to get ID
     
-    # Add items
+    # Add items and update asset status to "in-use"
     for item in challan.items:
         db_item = models.ChallanItem(**item.dict(), challan_id=c.id)
         db.add(db_item)
+        
+        # Update asset status to "in-use"
+        if item.asset_id:
+            asset = db.query(models.Asset).filter(models.Asset.asset_id == item.asset_id).first()
+            if asset:
+                asset.status = "in-use"
+                db.add(asset)
     
     db.commit()
     db.refresh(c)
@@ -252,13 +284,34 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
     for key, value in challan_data.items():
         setattr(db_challan, key, value)
     
+    # Get current items to check for asset status changes
+    current_items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).all()
+    current_asset_ids = [item.asset_id for item in current_items if item.asset_id]
+    
     # Delete existing items
     db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
     
-    # Add new items
+    # Add new items and update asset status
+    new_asset_ids = []
     for item in challan.items:
         db_item = models.ChallanItem(**item.dict(), challan_id=id)
         db.add(db_item)
+        
+        # Update asset status to "in-use"
+        if item.asset_id:
+            new_asset_ids.append(item.asset_id)
+            asset = db.query(models.Asset).filter(models.Asset.asset_id == item.asset_id).first()
+            if asset:
+                asset.status = "in-use"
+                db.add(asset)
+    
+    # Set assets that are no longer in the challan back to "available"
+    for asset_id in current_asset_ids:
+        if asset_id not in new_asset_ids:
+            asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
+            if asset:
+                asset.status = "available"
+                db.add(asset)
     
     db.commit()
     db.refresh(db_challan)
@@ -273,6 +326,18 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
 def delete_challan(id: int, db: Session = Depends(get_db)):
     c = db.query(models.Challan).filter(models.Challan.id == id).first()
     if c:
+        # Get all items in this challan
+        items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).all()
+        
+        # Set asset status back to "available" for all assets in this challan
+        for item in items:
+            if item.asset_id:
+                asset = db.query(models.Asset).filter(models.Asset.asset_id == item.asset_id).first()
+                if asset:
+                    asset.status = "available"
+                    db.add(asset)
+        
+        # Delete items and challan
         db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
         db.delete(c)
         db.commit()
@@ -288,7 +353,17 @@ def mark_item_as_returned(
     if not db_item:
         raise HTTPException(status_code=404, detail="Item not found")
     
+    # Update the returned date
     db_item.returned_date = returned_data.returned_date
+    
+    # If the item has an asset_id, set the asset status back to "available"
+    if db_item.asset_id:
+        asset = db.query(models.Asset).filter(models.Asset.asset_id == db_item.asset_id).first()
+        if asset:
+            asset.status = "available"
+            asset.returned_date = returned_data.returned_date
+            db.add(asset)
+    
     db.commit()
     db.refresh(db_item)
     return db_item
