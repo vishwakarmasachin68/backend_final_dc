@@ -13,7 +13,7 @@ class CategorySchema(CategoryBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Client schemas
 class ClientBase(BaseModel):
@@ -26,7 +26,7 @@ class ClientSchema(ClientBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Location schemas
 class LocationBase(BaseModel):
@@ -39,16 +39,20 @@ class LocationSchema(LocationBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Project schemas
+# schemas.py
+
 class ProjectBase(BaseModel):
-    name: str
-    client: str
-    project_lead: Optional[str] = None
-    start_date: Optional[date] = None
-    end_date: Optional[date] = None
-    status: Optional[str] = "active"
+    client: Optional[str] = None
+    location: Optional[str] = None
+    has_po: Optional[str] = "no"
+    po_number: Optional[str] = None
+    project_name: str
+    project_details: Optional[str] = None
+    field_supervisor: Optional[str] = None
+    persons_involved: Optional[str] = None
 
 class ProjectCreate(ProjectBase):
     pass
@@ -57,7 +61,8 @@ class ProjectSchema(ProjectBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
+
 
 # Asset schemas
 class AssetBase(BaseModel):
@@ -93,7 +98,7 @@ class AssetCreate(AssetBase):
 
 class AssetSchema(AssetBase):
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Asset Tracking schemas
 class AssetTrackingBase(BaseModel):
@@ -114,7 +119,7 @@ class AssetTrackingSchema(AssetTrackingBase):
     id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Challan Item schemas
 class ChallanItemBase(BaseModel):
@@ -132,22 +137,23 @@ class ChallanItemSchema(ChallanItemBase):
     challan_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Challan schemas
 class ChallanBase(BaseModel):
     dc_number: Optional[str] = None
     date: date
     client: str
-    project: str
+    project: Optional[str] = None
     location: str
     has_po: str
     po_number: Optional[str] = None
     dc_sequence: int
-    prepared_by: str
-    approved_by: str
+    prepared_by: Optional[str] = None   # ✅ allow null
+    approved_by: Optional[str] = None   # ✅ allow null
     received_by: Optional[str] = None
     items: List[ChallanItemCreate] = []
+
 
 class ChallanCreate(ChallanBase):
     pass
@@ -157,4 +163,4 @@ class ChallanSchema(ChallanBase):
     items: List[ChallanItemSchema] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -96,12 +96,16 @@ class Challan(Base):
     dc_number = Column(String, nullable=True)
     dc_sequence = Column(String, nullable=False)
     date = Column(Date, nullable=False)
-    name = Column(String, nullable=True)
-    project_name = Column(String, nullable=True)
+    project = Column(String, nullable=True)        # ✅ rename
     client = Column(String, nullable=True)
     location = Column(String, nullable=True)
     has_po = Column(String, default="no")
     po_number = Column(String, nullable=True)
+    prepared_by = Column(String, nullable=True)
+    approved_by = Column(String, nullable=True)
+    received_by = Column(String, nullable=True)
+
+
 
 class ChallanItem(Base):
     __tablename__ = "challan_items"
