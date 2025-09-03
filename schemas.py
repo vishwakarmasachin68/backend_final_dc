@@ -2,6 +2,17 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date, datetime
 
+# Add these new schemas for categories
+class CategoryCreate(BaseModel):
+    name: str
+
+class CategorySchema(BaseModel):
+    id: Optional[int] = None
+    name: str
+    
+    class Config:
+        from_attributes = True
+
 class ClientCreate(BaseModel):
     name: str
 
@@ -53,7 +64,7 @@ class AssetBase(BaseModel):
     make: Optional[str] = None
     model: Optional[str] = None
     serial_number: str
-    description: Optional[str] = None  # Added description field
+    description: Optional[str] = None
     supplier_details: Optional[str] = None
     date_of_purchase: Optional[date] = None
     warranty_details: Optional[str] = None

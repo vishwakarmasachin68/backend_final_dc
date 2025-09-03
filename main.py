@@ -27,6 +27,32 @@ def get_db():
     finally:
         db.close()
 
+# Category endpoints
+@app.get("/categories/", response_model=List[schemas.CategorySchema])
+def get_categories(db: Session = Depends(get_db)):
+    return db.query(models.Category).all()
+
+@app.post("/categories/", response_model=schemas.CategorySchema)
+def add_category(category: schemas.CategoryCreate, db: Session = Depends(get_db)):
+    existing_category = db.query(models.Category).filter(models.Category.name == category.name).first()
+    if existing_category:
+        raise HTTPException(status_code=400, detail="Category already exists")
+
+    db_category = models.Category(name=category.name)
+    db.add(db_category)
+    db.commit()
+    db.refresh(db_category)
+    return db_category
+
+@app.delete("/categories/{category_name}")
+def delete_category(category_name: str, db: Session = Depends(get_db)):
+    db_category = db.query(models.Category).filter(models.Category.name == category_name).first()
+    if not db_category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    db.delete(db_category)
+    db.commit()
+    return {"message": "Category deleted successfully"}
+
 # Client endpoints
 @app.get("/clients/", response_model=List[schemas.ClientSchema])
 def get_clients(db: Session = Depends(get_db)):

@@ -2,8 +2,14 @@ from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Boolean, D
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from database import Base
 
-Base = declarative_base()
+
+# Add this new model for categories
+class Category(Base):
+    __tablename__ = "categories"
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
 
 class Client(Base):
     __tablename__ = "clients"
@@ -33,11 +39,11 @@ class Asset(Base):
     id = Column(Integer, primary_key=True, index=True)
     asset_id = Column(String, unique=True, nullable=False)
     asset_name = Column(String, nullable=False)
-    category = Column(String, nullable=True)
+    category = Column(String, nullable=True)  # This will now reference category names
     make = Column(String, nullable=True)
     model = Column(String, nullable=True)
     serial_number = Column(String, unique=True, nullable=False)
-    description = Column(Text, nullable=True)  # Added description field
+    description = Column(Text, nullable=True)
     supplier_details = Column(Text, nullable=True)
     date_of_purchase = Column(Date, nullable=True)
     warranty_details = Column(Text, nullable=True)
