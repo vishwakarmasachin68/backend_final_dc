@@ -323,7 +323,7 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
         db_item = models.ChallanItem(**item.dict(), challan_id=id)
         db.add(db_item)
         
-        # Update asset status to "in-use"
+        # Update asset status to "in-use" for new items
         if item.asset_id:
             new_asset_ids.append(item.asset_id)
             asset = db.query(models.Asset).filter(models.Asset.asset_id == item.asset_id).first()
@@ -331,7 +331,7 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
                 asset.status = "in-use"
                 db.add(asset)
     
-    # Set assets that are no longer in the challan back to "available"
+    # For assets that were removed from the challan, set status to "available"
     for asset_id in current_asset_ids:
         if asset_id not in new_asset_ids:
             asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
@@ -350,59 +350,47 @@ def update_challan(id: int, challan: schemas.ChallanSchema, db: Session = Depend
 
 @app.delete("/challans/{id}/")
 def delete_challan(id: int, db: Session = Depends(get_db)):
-    c = db.query(models.Challan).filter(models.Challan.id == id).first()
-    if c:
-        # Get all items in this challan
-        items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).all()
-        
-        # Set asset status back to "available" for all assets in this challan
-        for item in items:
-            if item.asset_id:
-                asset = db.query(models.Asset).filter(models.Asset.asset_id == item.asset_id).first()
-                if asset:
-                    asset.status = "available"
-                    db.add(asset)
-        
-        # Delete items and challan
-        db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
-        db.delete(c)
-        db.commit()
-    return {"ok": True}
-
-@app.put("/challan-items/{item_id}/return")
-def mark_item_as_returned(
-    item_id: int, 
-    returned_data: schemas.ItemReturnSchema, 
-    db: Session = Depends(get_db)
-):
-    db_item = db.query(models.ChallanItem).filter(models.ChallanItem.id == item_id).first()
-    if not db_item:
-        raise HTTPException(status_code=404, detail="Item not found")
+    # First get the challan to check for asset status updates
+    challan = db.query(models.Challan).filter(models.Challan.id == id).first()
+    if not challan:
+        raise HTTPException(status_code=404, detail="Challan not found")
     
-    # Update the returned date
-    db_item.returned_date = returned_data.returned_date
+    # Get all items to update asset status
+    items = db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).all()
+    asset_ids = [item.asset_id for item in items if item.asset_id]
     
-    # If the item has an asset_id, set the asset status back to "available"
-    if db_item.asset_id:
-        asset = db.query(models.Asset).filter(models.Asset.asset_id == db_item.asset_id).first()
+    # Update asset status to "available"
+    for asset_id in asset_ids:
+        asset = db.query(models.Asset).filter(models.Asset.asset_id == asset_id).first()
         if asset:
             asset.status = "available"
-            asset.returned_date = returned_data.returned_date
+            db.add(asset)
+    
+    # Delete items and challan
+    db.query(models.ChallanItem).filter(models.ChallanItem.challan_id == id).delete()
+    db.query(models.Challan).filter(models.Challan.id == id).delete()
+    db.commit()
+    return {"ok": True}
+
+@app.put("/challan-items/{id}/return")
+def mark_item_as_returned(id: int, data: dict, db: Session = Depends(get_db)):
+    item = db.query(models.ChallanItem).filter(models.ChallanItem.id == id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    returned_date = data.get("returned_date")
+    if not returned_date:
+        returned_date = date.today()
+    
+    item.returned_date = returned_date
+    db.add(item)
+    
+    # Update asset status to "available"
+    if item.asset_id:
+        asset = db.query(models.Asset).filter(models.Asset.asset_id == item.asset_id).first()
+        if asset:
+            asset.status = "available"
             db.add(asset)
     
     db.commit()
-    db.refresh(db_item)
-    return db_item
-
-@app.get("/health")
-def health_check(db: Session = Depends(get_db)):
-    try:
-        # Test database connection
-        db.execute("SELECT 1")
-        return {"status": "healthy", "database": "connected"}
-    except Exception as e:
-        return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    return {"ok": True}
